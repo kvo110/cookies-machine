@@ -1,0 +1,91 @@
+CS 4370 — Web Programming in PHP
+In-Class Exercise 10 — Cookies & Sessions
+Name: Kenny Vo
+
+--------------------------------------------------
+
+LIVE URL
+https://codd.cs.gsu.edu/~hvo30/WP/INC/INC10/session-cookies-1.php
+https://codd.cs.gsu.edu/~hvo30/WP/INC/INC10/summary.html
+
+--------------------------------------------------
+
+STEPS 3–14 ANSWERS
+
+Step 3 — Cookie Behavior on Reload
+Each time the page reloads, the VISIT_NUMBER increases by 1 because the cookie is incremented and rewritten. The LAST_VISIT timestamp updates to the current time on every refresh. However, the FIRST_VISIT value remains constant since it is only set once and never overwritten. The “Welcome Back!” message appears after the first reload when the browser begins sending stored cookies back to the server.
+
+Step 4 — Inspecting Cookies in DevTools
+The cookies present include LAST_VISIT, VISIT_NUMBER, FIRST_VISIT, and sometimes PORTAL_LAB1. LAST_VISIT stores the most recent visit timestamp, VISIT_NUMBER tracks how many times the page has been visited, and FIRST_VISIT stores the original visit date. The expiration for LAST_VISIT and VISIT_NUMBER is about 14 days, while FIRST_VISIT is set to expire in one year, which is controlled by the code using time() + 3600 * 24 * 365.
+
+Step 5 — Deleting a Cookie
+After deleting the VISIT_NUMBER cookie and reloading the page, the visit counter resets to 1. This shows that the server depends entirely on the browser to send cookie data. The system partially treats the user as a first-time visitor for that specific cookie, confirming how cookies control stored state.
+
+Step 6 — Browser Cookie Survey
+Most modern websites use cookies, likely over 80–90% of sites visited. Examples include Google, which stores login sessions; Amazon, which stores shopping cart data; and YouTube, which tracks user preferences and watch history. This demonstrates how cookies are essential for personalization and user experience.
+
+Step 7 — Breaking setcookie() Rule
+When setcookie() is placed after the <!DOCTYPE> line, PHP produces the error “Warning: Cannot modify header information — headers already sent.” This happens because cookies are sent as HTTP headers, which must be transmitted before any HTML output. Once output begins, headers can no longer be modified.
+
+Step 8 — FIRST_VISIT Logic
+The condition if ($firstvisit === '') works because on the first visit, no cookie exists, so PHP assigns an empty value and writes the cookie. On later visits, the browser sends the stored cookie, so the condition fails and the value is not overwritten. If setcookie() were called every time, the original first visit date would be lost.
+
+Step 9 — Accessing Lab 3 Without Login
+When accessing Lab 3 without logging in, the page displays an “Authorization Failure” message. This occurs because the session variable $_SESSION['authorized'] was never set, so access is denied.
+
+Step 10 — Incorrect Password Submission
+Submitting an incorrect password results in “Authorization Failed” in Lab 2. No session variable is created, so $_SESSION['authorized'] remains unset. Because of this, Lab 3 cannot be accessed.
+
+Step 11 — Random Number Cookie
+The random_number cookie appears on all pages because it is set with the path “/”, making it accessible across the entire site. This cookie persists independently of sessions. While it survives across pages, it has no effect on authentication because session data is stored on the server.
+
+Step 12 — Deleting PHPSESSID
+The PHPSESSID cookie appears as a long random string and is not human-readable. After deleting it, accessing Lab 3 results in being logged out. This happens because the session ID connects the browser to server-side session data, and removing it breaks that connection.
+
+Step 13 — Successful Login
+After entering the correct password “Test”, Lab 3 becomes accessible. This is because Lab 2 sets $_SESSION['authorized'] = 'ok', which persists across pages. Lab 3 reads this session value and allows access without requiring another login.
+
+Step 14 — Full Session Flow
+The process starts in Lab 1 where the user submits a password via a POST form. Lab 2 receives the request, validates the password, and sets $_SESSION['authorized'] = 'ok' if correct. PHP generates a session ID stored in the PHPSESSID cookie. When visiting Lab 3, the browser sends this cookie, allowing PHP to retrieve session data. Lab 3 checks the session variable and grants access if authorized.
+
+--------------------------------------------------
+
+CRITICAL THINKING QUESTIONS
+
+Q1 — Cookies vs Sessions
+Cookies store data on the client (browser), while sessions store data on the server. Cookies can persist for long periods depending on their expiration, while sessions typically end when the browser closes or after inactivity. Cookies can be modified by users, making them less secure, whereas sessions are more secure because the data is stored server-side. Sensitive data should not be stored in cookies and should be carefully handled even in sessions.
+
+Q2 — setcookie() and HTTP
+The setcookie() function must be called before any HTML output because cookies are sent as HTTP response headers. Headers must be transmitted before the body of the response. If output begins first, PHP cannot modify headers and throws the error “headers already sent.” This reflects how HTTP responses are structured.
+
+Q3 — FIRST_VISIT Logic
+On the first visit, $_COOKIE['FIRST_VISIT'] is not set, so PHP assigns an empty value and creates the cookie. On subsequent visits, the browser sends the cookie back, preventing it from being overwritten. If it were set every time, the original visit date would be lost. Users can delete cookies, showing that client-side data cannot be fully trusted.
+
+Q4 — session_start() Mechanics
+When session_start() is called, PHP checks for an existing session ID. If none exists, it creates a session, generates a random ID, and sends it as the PHPSESSID cookie. The server stores session data in a file. On future requests, the browser sends the session ID, allowing PHP to load the session data.
+
+Q5 — Session Persistence
+Navigating pages keeps the session active. Closing a tab does not destroy the session, but closing the browser may end it. Sessions can also expire based on server settings like session.gc_maxlifetime. Calling session_destroy() removes all session data, while session_unset() clears variables but keeps the session active.
+
+Q6 — Scaling Sessions
+In multi-server environments, sessions stored locally can break because requests may go to different servers. Solutions include using databases or in-memory stores like Redis. These approaches allow all servers to access the same session data.
+
+Q7 — Authentication Issues
+The system has several issues including a hardcoded password, no encryption, no brute-force protection, no HTTPS, and no session regeneration. Fixes include using hashed passwords, implementing login limits, enabling HTTPS, and regenerating session IDs.
+
+Q8 — isset() Bug
+Without isset(), PHP produces an “Undefined index” notice when accessing a missing cookie. Using isset() prevents this by checking if the variable exists. This applies to $_COOKIE, $_POST, and $_GET. The null coalescing operator (??) is a cleaner alternative.
+
+Q9 — CSRF
+A CSRF attack tricks a user into submitting a request unknowingly. Without protection, the browser automatically includes session cookies. A CSRF token prevents this by validating a unique value stored in $_SESSION and sent with the form.
+
+Q10 — Cookie Privacy
+GDPR requires consent for non-essential cookies. The cookies in this lab are functional since they track usage but do not collect personal data. If cookies are disabled, the site will treat every visit as new and session functionality will fail.
+
+Q11 — Real Websites
+Websites like Amazon, Google, and YouTube use cookies for sessions and tracking. These cookies store login states, preferences, and analytics data. Without cookies, login persistence and personalization would not work.
+
+Q12 — Remember Me Design
+A secure “Remember Me” system uses a random token stored in a cookie and a hashed version stored in a database. This allows persistent login without exposing sensitive data. Logging out removes stored tokens. Extending session lifetime alone is insecure and not scalable.
+
+--------------------------------------------------
